@@ -1,8 +1,9 @@
-import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
+import { ApolloClient, ApolloProvider, FieldPolicy, InMemoryCache } from '@apollo/client';
 import React from 'react';
 import { Navigation } from 'react-native-navigation';
 import { Posts } from './posts/Posts';
 import { AddPost } from './addPost/AddPost';
+import { offsetLimitPagination } from '@apollo/client/utilities';
 
 
 
@@ -16,9 +17,39 @@ const screens = [
 
 ];
 
+type KeyArgs = FieldPolicy<any>['keyArgs'];
+
+
+function pageLimitPagination<T>(keyArgs: KeyArgs = false): FieldPolicy<T[]> {
+  return {
+      keyArgs,
+      merge(existing: any, incoming: any, { args }) {
+          console.log('args',keyArgs );
+          console.log('exist', existing);
+          console.log('inco', incoming);
+          const cacheCopy = existing ? [...existing.data] : [];
+          return {
+              ...incoming,
+              data: [
+                  ...cacheCopy,
+                  ...incoming.data,
+              ],
+          };
+      },
+  };
+}
+
 const client = new ApolloClient({
   uri: 'https://api.graphqlplaceholder.com/',
-  cache: new InMemoryCache()
+  cache: new InMemoryCache({
+    typePolicies: {
+      Query: {
+        fields: {
+          posts: pageLimitPagination()
+        },
+      },
+    },
+  })
 });
 
 /// create Screen
