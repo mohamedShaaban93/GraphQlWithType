@@ -13,7 +13,7 @@ interface Screens {
 }
 const screens = [
   { name: 'posts', Screen: Posts },
-  { name: 'addPosts', Screen: AddPost }
+  { name: 'addPost', Screen: AddPost }
 
 ];
 

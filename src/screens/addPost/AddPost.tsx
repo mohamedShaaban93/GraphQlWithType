@@ -3,26 +3,13 @@ import { gql, useMutation, useQuery } from '@apollo/client';
 import { Button, Text, View } from 'react-native';
 import { FAB, TextInput } from 'react-native-paper';
 import { Navigation } from 'react-native-navigation';
+import { ADD_POST } from '../../graphql/mutations/postMutation';
 
 interface Props {
   componentId: string;
 }
 
-const ADD_POST = gql`
-mutation addPost($userId:Int! , $title:String!, $body:String! ){
-  addPost(data:{
-    userId: $userId
-    title: $title
-    body: $body
-  }){
-   title
-    body
-    author{
-      name
-    }
-  }
-  }
-`
+
 
 export const AddPost: React.FC<Props> = (props: Props) => {
   const [title, settitle] = useState('')
@@ -55,7 +42,7 @@ export const AddPost: React.FC<Props> = (props: Props) => {
             
           })
           
-          // Navigation.pop(props.componentId)
+          Navigation.pop(props.componentId)
         }}
       />
 
