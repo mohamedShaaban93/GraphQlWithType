@@ -5,7 +5,7 @@ import { FAB } from 'react-native-paper';
 import { cache } from '..';
 import { GET_POSTS } from '../../graphql/query/postQuery';
 import { DELETE_POST } from '../../graphql/mutations/postMutation';
-import { Post } from '../../models/Post.model';
+import { Post, PostsData, PostsVars } from '../../models/Post.model';
 import { Navigation } from 'react-native-navigation';
 
 interface Props {
@@ -13,11 +13,12 @@ interface Props {
 }
 
 
-export const Posts: React.FC<Props> = (props: Props) => {
+
+export const Posts: React.FC<Props> = (props) => {
 
   const page = React.useRef(1);
 
-  const { loading, error, data, fetchMore } = useQuery(GET_POSTS,
+  const { loading, error, data, fetchMore } = useQuery<PostsData,PostsVars>(GET_POSTS,
     {
       variables: { page: 1, limit: 10 }
     });
@@ -33,7 +34,7 @@ export const Posts: React.FC<Props> = (props: Props) => {
       update: (cache: any) => {
         const myCache:any = (cache as InMemoryCache).readQuery({ query: GET_POSTS, variables: { page: 1, limit: 10 } });
         console.log("My cache", myCache);
-        const updatedCache = (myCache.posts.data).filter((p:Post) => p.id !== id);
+        const updatedCache = (myCache.posts.data).filter((p:Post) => +p.id !== id);
         // updatedCache.map(item=>console.log(item.id))
         (cache as InMemoryCache).writeQuery({
           query: GET_POSTS,
@@ -78,11 +79,11 @@ export const Posts: React.FC<Props> = (props: Props) => {
     <View style={{ flex: 1 }} >
       <FlatList
         style={{ flex: 1 }}
-        keyExtractor={({ id }) => id}
+        keyExtractor={(post) => post.id}
         data={data?.posts.data || []}
         renderItem={({ item: { id, title, body } }) => {
           return (
-            <TouchableNativeFeedback onLongPress={() => deletePostHandler(id)}>
+            <TouchableNativeFeedback onLongPress={() => deletePostHandler(+id)}>
               <View key={id} style={{ margin: 10, backgroundColor: 'pink', paddingVertical: 30 }}>
                 <Text>{id}---{title}</Text>
               </View>
