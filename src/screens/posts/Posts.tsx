@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { gql, InMemoryCache, useMutation, useQuery } from '@apollo/client';
 import { FlatList, ScrollView, Text, TouchableNativeFeedback, View } from 'react-native';
 import { FAB } from 'react-native-paper';
-import { Navigation } from 'react-native-navigation';
+import { cache } from '..';
 
 interface Props {
   componentId: string;
 }
 
 const GET_POSTS = gql`
-query getPosts($page: Int){
+query getPosts($page: Int,$limit:Int){
   posts(pagination:{
-    limit: 10 ,
+    limit: $limit ,
     page: $page
   }){
      data{
@@ -26,23 +26,19 @@ query getPosts($page: Int){
 const DELETE_POST = gql`
 mutation deletePost($postId:ID! ){
   deletePost(postId:$postId){
-    id
-   title
-    body
-    author{
-      name
-    	}
-  	}
+    id  
   }
-`
+}`
 
 
 
 export const Posts: React.FC<Props> = (props: Props) => {
-  const [page, setpage] = useState(1)
+
+  const page = React.useRef(1);
+
   const { loading, error, data, fetchMore } = useQuery(GET_POSTS,
     {
-      variables: { page }
+      variables: { page: 1, limit: 10 }
     });
 
   const [deletePost] = useMutation(DELETE_POST, {
@@ -55,9 +51,9 @@ export const Posts: React.FC<Props> = (props: Props) => {
       },
       update: (cache: any) => {
         const myCache = (cache as InMemoryCache).readQuery({ query: GET_POSTS, variables: { page: 1, limit: 10 } });
-        console.log('xxxxxxxxxxxxxxxxxxxxxxxxx',data);
-        
-        const updatedCache = (data).filter((p) => p.id !== id);
+        console.log("My cache", myCache);
+        const updatedCache = (myCache.posts.data).filter((p) => p.id !== id);
+        // updatedCache.map(item=>console.log(item.id))
         (cache as InMemoryCache).writeQuery({
           query: GET_POSTS,
           variables: {
@@ -65,45 +61,62 @@ export const Posts: React.FC<Props> = (props: Props) => {
             limit: 10,
           },
           data: {
-            posts: { data: [...updatedCache] },
-          },
+            posts: { ...myCache.posts, data: [...updatedCache] },
+          }
         });
       },
     });
+
   };
 
 
 
 
-  if (loading) return <Text>'Loading...'</Text>;
+  // if (loading) return <Text>'Loading...'</Text>;
   if (error) return <Text>`Error! ${error.message}`</Text>;
   console.log('ddddddddddddddddddddddddddddddddddd', data);
 
   return (
-    <View >
+    <View style={{ flex: 1 }} >
       <FlatList
-        data={data.posts.data}
+        style={{ flex: 1 }}
+        keyExtractor={({ id }) => id}
+        data={data?.posts.data || []}
         renderItem={({ item: { id, title, body } }) => {
           return (
-            <TouchableNativeFeedback onLongPress={()=>deletePostHandler(id)}>
-            <View key={id} style={{ margin: 10, backgroundColor: 'pink', paddingVertical: 30 }}>
-              <Text>{id}</Text>
+            <TouchableNativeFeedback onLongPress={() => deletePostHandler(id)}>
+              <View key={id} style={{ margin: 10, backgroundColor: 'pink', paddingVertical: 30 }}>
+                <Text>{id}</Text>
               </View>
-              </TouchableNativeFeedback>
+            </TouchableNativeFeedback>
           )
         }}
-        onEndReachedThreshold={0.5} // Tried 0, 0.01, 0.1, 0.7, 50, 100, 700
+        // onEndReachedThreshold={0.5} // Tried 0, 0.01, 0.1, 0.7, 50, 100, 700
 
-        onEndReached={({ distanceFromEnd }) => {
+        onEndReached={async ({ distanceFromEnd }) => {
           console.log(distanceFromEnd) // 607, 878 
           console.log('reached'); // once, and if I scroll about 14% of the screen, 
-          fetchMore({
+          const myCache = (cache as InMemoryCache).readQuery({ query: GET_POSTS, variables: { page: 1, limit: 10 } });
+          const newData = await fetchMore({
             variables: {
-              page: page + 1,
-              limit: 10,
+              page: ++page.current,
             },
           });
-          setpage(page + 1)
+           
+          console.log(newData);
+          // console.log({ ...myCache.posts,data:[...myCache.posts.data,...newData.data.posts.data] });
+          // updatedCache.map(item=>console.log(item.id))
+          (cache as InMemoryCache).writeQuery({
+            query: GET_POSTS,
+            variables: {
+              page: 1,
+              limit: 10,
+            },
+            data: {
+              posts:{ ...myCache.posts,data:[...myCache.posts.data,...newData.data.posts.data] }
+            },
+          });
+          //  setpage(page + 1)
         }}
 
       />
@@ -117,12 +130,8 @@ export const Posts: React.FC<Props> = (props: Props) => {
         }}
         small={false}
         icon="plus"
-        onPress={() => {
-          Navigation.push(props.componentId, {
-            component: {
-              name: 'addPosts',
-            },
-          });
+        onPress={async () => {
+
         }}
       />
 
